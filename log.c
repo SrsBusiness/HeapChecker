@@ -46,6 +46,23 @@ debug(const char *fmt, ...)
 }
 
 int
+info(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+
+    /* sizeof includes '\0', strlen does not */
+    uint64_t info_fmt_len = sizeof("INFO: ") + strlen(fmt);
+    char *info_fmt = calloc(info_fmt_len, 1);
+    strncat(info_fmt, "INFO: ", info_fmt_len);
+    strncat(info_fmt, fmt, info_fmt_len);
+    int ret = vprintf(info_fmt, ap);
+    free(info_fmt);
+    va_end(ap);
+    return ret;
+}
+
+int
 error(const char *fmt, ...)
 {
     va_list ap;

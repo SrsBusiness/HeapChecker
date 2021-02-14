@@ -317,16 +317,6 @@ parse_elf64(const uint8_t *_elf_raw_data, uint64_t len, struct ELF64_Data *parse
         return false;
     }
 
-    /* Find the SHT_SYMTAB Section with the name .symtab */
-    if (!parse_elf64_symtab(elf_raw_data, len, parsed_data)) {
-        return false;
-    }
-
-    /* Find the SHT_STRTAB Section with the name .strtab */
-    if (!parse_elf64_strtab(elf_raw_data, len, parsed_data)) {
-        return false;
-    }
-
     /* Find the SHT_PROGBITS Section with the name .plt */
     if (!parse_elf64_plt(elf_raw_data, len, parsed_data)) {
         return false;
