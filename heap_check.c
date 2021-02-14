@@ -21,6 +21,7 @@ const char *heap_func_names[] = {
     "calloc",
     "malloc",
     "realloc",
+    "reallocarray",
     "free"
 };
 
@@ -216,6 +217,40 @@ handle_realloc(pid_t pid, struct hashmap *breakpoints, struct hashmap *buffers, 
     return true;
 }
 
+bool
+handle_reallocarray(pid_t pid, struct hashmap *breakpoints, struct hashmap *buffers, void *ptr, uint64_t nmemb, uint64_t size) {
+    /* Continue until return */
+    if (!trace_cont(pid) ||
+        !trace_wait(pid)) {
+        return false;
+    }
+
+    struct user_regs_struct regs;
+    if (!trace_get_regs(pid, &regs)) {
+        return false;
+    }
+
+    debug("realloc(%p, %llu, %llu) -> %p\n", ptr, nmemb, size, (void *)regs.rax);
+    if (regs.rax != 0) {
+        struct buffer *b = hashmap_get(buffers, ptr);
+        if (b == NULL) {
+            /* bug */
+            error("Cannot find record of buffer at %p resized by realloc()\n", ptr);
+            return false;
+        }
+        if ((void *)regs.rax == ptr) {
+            /* resize */
+            b->len = nmemb * size;
+        } else {
+            /* new buffer */
+            hashmap_del(buffers, ptr);
+            *b = (struct buffer){.addr = regs.rax, .len = nmemb * size};
+            hashmap_add(buffers, (void *)regs.rax, b);
+        }
+    } /* else no op */
+    return true;
+}
+
 /*
  * free() is the simplest to handle because it returns void. This means we have no
  * reason to set a breakpoint on its return address to capture the return value
@@ -269,7 +304,7 @@ handle_breakpoint(pid_t pid, struct hashmap *breakpoints, struct hashmap *buffer
         return false;
     }
     
-    /* Read return address we are in calloc, malloc, or realloc */
+    /* Read return address we are in calloc, malloc, realloc, or reallocarray*/
     uint64_t return_addr = 0;
     struct breakpoint ret = {};
     
@@ -327,6 +362,8 @@ handle_breakpoint(pid_t pid, struct hashmap *breakpoints, struct hashmap *buffer
     case HEAP_REALLOC:
         success = handle_realloc(pid, breakpoints, buffers, (void *)regs.rdi, regs.rsi);
         break;
+    case HEAP_REALLOCARRAY:
+        success = handle_reallocarray(pid, breakpoints, buffers, (void *)regs.rdi, regs.rsi, regs.rdx);
     case HEAP_FREE:
         success = handle_free(pid, breakpoints, buffers, (void *)regs.rdi);
         break;

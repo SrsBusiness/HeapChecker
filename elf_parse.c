@@ -341,35 +341,6 @@ parse_elf64(const uint8_t *_elf_raw_data, uint64_t len, struct ELF64_Data *parse
 }
 
 bool
-get_GOT_offsets(struct ELF64_Data *elf64)
-{
-    for (uint64_t i = 0; i < elf64->rela_plt_num_entries; i++) {
-        Elf64_Rela *rela = &elf64->rela_plt_entries[i];
-        uint64_t GOT_offset = rela->r_offset; 
-        uint64_t dynsym_index = ELF64_R_SYM(rela->r_info);
-        Elf64_Sym *sym = &elf64->dynsym_entries[dynsym_index];
-        const char *sym_name = &elf64->dynstr_data[sym->st_name];
-        
-        bool found = false;
-        if (found = (strncmp(sym_name, "calloc", sizeof("calloc"))) == 0) {
-            
-        } else if (found = (strncmp(sym_name, "malloc", sizeof("malloc"))) == 0) {
-        } else if (found = (strncmp(sym_name, "realloc", sizeof("realloc"))) == 0) {
-        } else if (found = (strncmp(sym_name, "free", sizeof("free"))) == 0) {
-        }
-        if (found) {
-            debug("Found symbol %s\n", sym_name);
-            debug("Symbol index: %llu\n", dynsym_index);
-            debug("GOT offset: 0x%x, addend: 0x%x\n", GOT_offset);
-            debug("Sym value: 0x%x\n", sym->st_value);
-            debug("Relocation type: %u\n", ELF32_R_TYPE(rela->r_info));
-        }
-
-    }
-    return true;
-}
-
-bool
 get_PLT_addresses(struct ELF64_Data *elf64, struct Heap_Func_Addrs *addrs)
 {
     debug("PLT size: %u\n", elf64->sh_plt->sh_size);
@@ -391,6 +362,9 @@ get_PLT_addresses(struct ELF64_Data *elf64, struct Heap_Func_Addrs *addrs)
         } else if (strncmp(sym_name, "realloc", sizeof("realloc")) == 0) {
             debug("realloc: 0x%x\n", PLT_base_address + (i + 1) * PLT_entsize);
             addrs->addrs[HEAP_REALLOC] = PLT_sym_address;
+        } else if (strncmp(sym_name, "reallocarray", sizeof("reallocarray")) == 0) {
+            debug("reallocarray: 0x%x\n", PLT_base_address + (i + 1) * PLT_entsize);
+            addrs->addrs[HEAP_REALLOCARRAY] = PLT_sym_address;
         } else if (strncmp(sym_name, "free", sizeof("free")) == 0) {
             debug("free: 0x%x\n", PLT_base_address + (i + 1) * PLT_entsize);
             addrs->addrs[HEAP_FREE] = PLT_sym_address;
@@ -398,5 +372,3 @@ get_PLT_addresses(struct ELF64_Data *elf64, struct Heap_Func_Addrs *addrs)
     }
     return true;
 }
-
-
