@@ -230,12 +230,12 @@ handle_reallocarray(pid_t pid, struct hashmap *breakpoints, struct hashmap *buff
         return false;
     }
 
-    debug("realloc(%p, %llu, %llu) -> %p\n", ptr, nmemb, size, (void *)regs.rax);
+    debug("reallocarray(%p, %llu, %llu) -> %p\n", ptr, nmemb, size, (void *)regs.rax);
     if (regs.rax != 0) {
         struct buffer *b = hashmap_get(buffers, ptr);
         if (b == NULL) {
             /* bug */
-            error("Cannot find record of buffer at %p resized by realloc()\n", ptr);
+            error("Cannot find record of buffer at %p resized by reallocarray()\n", ptr);
             return false;
         }
         if ((void *)regs.rax == ptr) {
@@ -364,6 +364,7 @@ handle_breakpoint(pid_t pid, struct hashmap *breakpoints, struct hashmap *buffer
         break;
     case HEAP_REALLOCARRAY:
         success = handle_reallocarray(pid, breakpoints, buffers, (void *)regs.rdi, regs.rsi, regs.rdx);
+        break;
     case HEAP_FREE:
         success = handle_free(pid, breakpoints, buffers, (void *)regs.rdi);
         break;
@@ -423,7 +424,7 @@ trace_target(char **argv, struct Heap_Func_Addrs *func_addrs)
     }
     
     if (!set_heap_breakpoints(pid, func_addrs, &breakpoints)) {
-        error("Failed to set breakpoints at calloc, malloc, realloc, and free\n");
+        error("Failed to set breakpoints at calloc, malloc, realloc, reallocarray, and free\n");
         return false;
     }
     while (true) {
