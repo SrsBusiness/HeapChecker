@@ -1,13 +1,34 @@
 BUILDDIR := build
-BINDIR := build/bin
+BINDIR := $(BUILDDIR)/bin
+TARGET := $(BINDIR)/heapchecker
 OBJECTS := $(patsubst %.c,$(BUILDDIR)/%.o,$(wildcard *.c))
+TEST_OBJECTS := hashmap.o
+TEST_OBJECTS := $(patsubst %.o,$(BUILDDIR)/%.o,$(TEST_OBJECTS))
+
+CFLAGS :=
+LDFLAGS :=
 
 $(BUILDDIR)/%.o: %.c
-	cc -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-all: $(OBJECTS) | $(BINDIR)
+$(TARGET): $(OBJECTS) | $(BINDIR)
 	echo $(OBJECTS)
-	cc -o $(BINDIR)/heapchecker $(OBJECTS)
+	echo $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $(BINDIR)/heapchecker $(OBJECTS) $(LDFLAGS)
+
+.DEFAULT_GOAL := all
+all: CFLAGS += -O3
+all: $(TARGET)
+
+debug: CFLAGS += -g -O0
+debug: $(TARGET)
+
+tests: CFLAGS += -g -O0 -I.
+tests: $(TARGET) run_tests
+
+run_tests:
+	$(CC) $(CFLAGS) -o tests/test_main $(TEST_OBJECTS) tests/test_main.c -lcmocka
+	tests/test_main
 
 $(OBJECTS): | $(BUILDDIR)
 
@@ -19,6 +40,4 @@ $(BINDIR):
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILDDIR)
-
-
+	rm -rf build debug
